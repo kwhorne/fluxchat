@@ -1,5 +1,6 @@
 {
     "name": "kwhorne/fluxchat",
+    "version": "0.1.0",
     "description": "A Laravel Livewire messaging app built with Flux UI for teams with private chats and group conversations.",
     "license": "MIT",
     "autoload": {
