@@ -1,0 +1,11 @@
+{
+    "fluxchat::messages.search_contacts": "Search contacts...",
+    "fluxchat::messages.no_contacts_found": "No contacts found",
+    "fluxchat::messages.online": "Online",
+    "fluxchat::messages.no_messages_yet": "No messages yet. Start the conversation!",
+    "fluxchat::messages.start_conversation": "Send your first message below",
+    "fluxchat::messages.type_message": "Type a message...",
+    "fluxchat::messages.send": "Send",
+    "fluxchat::messages.select_contact": "Select a contact to start chatting",
+    "fluxchat::messages.choose_contact": "Choose someone from your contacts to begin a conversation"
+}

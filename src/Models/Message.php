@@ -1,315 +1,150 @@
 <?php
 
-namespace Kwhorne\FluxChat\Models;
+namespace Wirelabs\FluxChat\Models;
 
-use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Kwhorne\FluxChat\Enums\Actions;
-use Kwhorne\FluxChat\Enums\MessageType;
-use Kwhorne\FluxChat\Facades\FluxChat;
-use Kwhorne\FluxChat\Helpers\Helper;
-use Kwhorne\FluxChat\Models\Scopes\WithoutRemovedMessages;
-use Kwhorne\FluxChat\Traits\Actionable;
 
-/**
- * @property int $id
- * @property int|null $conversation_id
- * @property int $sendable_id
- * @property string $sendable_type
- * @property int|null $reply_id
- * @property string|null $body
- * @property MessageType $type
- * @property \Illuminate\Support\Carbon|null $kept_at filled when a message is kept from disappearing
- * @property \Illuminate\Support\Carbon|null $deleted_at
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \Kwhorne\FluxChat\Models\Action> $actions
- * @property-read int|null $actions_count
- * @property-read \Kwhorne\FluxChat\Models\Attachment|null $attachment
- * @property-read \Kwhorne\FluxChat\Models\Conversation|null $conversation
- * @property-read Message|null $parent
- * @property-read Message|null $reply
- * @property-read Model|\Eloquent $sendable
- *
- * @method static \Illuminate\Database\Eloquent\Builder|Message newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|Message newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|Message onlyTrashed()
- * @method static \Illuminate\Database\Eloquent\Builder|Message query()
- * @method static \Illuminate\Database\Eloquent\Builder|Message whereBody($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Message whereConversationId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Message whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Message whereDeletedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Message whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Message whereIsNotOwnedBy(\Illuminate\Database\Eloquent\Model|\Illuminate\Contracts\Auth\Authenticatable $user)
- * @method static \Illuminate\Database\Eloquent\Builder|Message whereKeptAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Message whereReplyId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Message whereSendableId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Message whereSendableType($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Message whereType($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Message whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Message withTrashed()
- * @method static \Illuminate\Database\Eloquent\Builder|Message withoutTrashed()
- *
- * @mixin \Eloquent
- */
 class Message extends Model
 {
-    use Actionable;
-    use HasFactory;
     use SoftDeletes;
 
-    public $timestamps = true;
+    protected $table = 'fluxchat_messages';
 
     protected $fillable = [
-        'body',
+        'conversation_id',
         'sendable_type',
         'sendable_id',
-        'conversation_id',
-        'reply_id',
+        'body',
         'type',
-        'kept_at',
+        'data',
+        'reply_to_id',
+        'edited_at',
     ];
 
     protected $casts = [
-        'type' => MessageType::class,
-        'kept_at' => 'datetime',
+        'data' => 'array',
+        'edited_at' => 'datetime',
     ];
 
-    public function __construct(array $attributes = [])
-    {
-        $this->table = FluxChat::formatTableName('messages');
-
-        parent::__construct($attributes);
-    }
-
-    /* relationship */
-
+    /**
+     * Get the conversation that owns the message.
+     */
     public function conversation(): BelongsTo
     {
         return $this->belongsTo(Conversation::class);
     }
 
-    /* Polymorphic relationship for the sender */
+    /**
+     * Get the sendable entity (User, etc.).
+     */
     public function sendable(): MorphTo
     {
         return $this->morphTo();
     }
 
     /**
-     * since you have a non-standard namespace;
-     * the resolver cannot guess the correct namespace for your Factory class.
-     * so we exlicilty tell it the correct namespace
+     * Get the message this message is replying to.
      */
-    protected static function newFactory()
+    public function replyTo(): BelongsTo
     {
-        return \Kwhorne\FluxChat\Workbench\Database\Factories\MessageFactory::new();
-    }
-
-    protected static function booted()
-    {
-        // Add scope if authenticated
-        static::addGlobalScope(WithoutRemovedMessages::class);
-
-        // listen to deleted
-        static::deleted(function ($message) {
-
-            if ($message->attachment?->exists()) {
-
-                // delete attachment
-                $message->attachment->delete();
-
-                // also delete from storage
-                if (Storage::disk(config('fluxchat.attachments.storage_disk', 'public'))->exists($message->attachment->file_path)) {
-                    Storage::disk(config('fluxchat.attachments.storage_disk', 'public'))->delete($message->attachment->file_path);
-                }
-            }
-
-            // Use a DB transaction to ensure atomicity
-            DB::transaction(function () use ($message) {
-                // Delete associated actions (polymorphic actionable relation)
-                $message->actions()->delete();
-            });
-        });
-    }
-
-    public function attachment(): MorphOne
-    {
-        return $this->morphOne(Attachment::class, 'attachable');
-    }
-
-    public function hasAttachment(): bool
-    {
-        return $this->attachment()->exists();
-    }
-
-    public function isAttachment(): bool
-    {
-        return $this->type === MessageType::ATTACHMENT;
+        return $this->belongsTo(Message::class, 'reply_to_id');
     }
 
     /**
-     * Check if the message has been read by a specific user.
+     * Get messages that reply to this message.
      */
-    public function readBy(Model|Participant $user): bool
+    public function replies()
     {
-        if ($user instanceof Participant) {
-            $user = $user->participantable;
-        }
-
-        return $this->conversation->getUnreadCountFor($user) <= 0;
+        return $this->hasMany(Message::class, 'reply_to_id');
     }
 
     /**
-     * Check if the message is owned by user
+     * Scope messages by conversation.
      */
-    public function ownedBy($user): bool
+    public function scopeInConversation($query, $conversationId)
     {
-        if (! $user || ! ($user instanceof \Illuminate\Database\Eloquent\Model)) {
-            return false;
-        }
-
-        return $this->sendable_type == $user->getMorphClass() && $this->sendable_id == $user->getKey();
-    }
-
-    public function belongsToAuth(): bool
-    {
-        $user = auth()->user();
-
-        return $this->sendable_type == $user->getMorphClass() && $this->sendable_id == $user->getKey();
-    }
-
-    // Relationship for the parent message
-    public function parent(): belongsTo
-    {
-        return $this->belongsTo(Message::class, 'reply_id')->withoutGlobalScope(WithoutRemovedMessages::class)->withTrashed();
-    }
-
-    // Relationship for the reply
-    public function reply(): HasOne
-    {
-        return $this->hasOne(Message::class, 'reply_id');
-    }
-
-    // Method to check if the message has a reply
-    public function hasReply(): bool
-    {
-        return $this->reply()->exists();
-    }
-
-    // Method to check if the message has a parent
-    public function hasParent(): bool
-    {
-        return $this->parent()->exists();
-    }
-
-    public function scopeWhereIsNotOwnedBy($query, Model|Authenticatable $user)
-    {
-
-        $query->where(function ($query) use ($user) {
-            $query->where('sendable_id', '<>', $user->getKey())
-                ->orWhere('sendable_type', '<>', $user->getMorphClass());
-        });
-
-        // $query->where(function ($query) use ($user) {
-        //     $query->whereNot('sendable_id', $user->id)
-        //           ->orWhereNot('sendable_type', $user->getMorphClass());
-        // });
-
+        return $query->where('conversation_id', $conversationId);
     }
 
     /**
-     * Delete for
-     * This will delete the message only for the auth user meaning other participants will be able to see it
-     *
-     * @return bool|null
+     * Scope messages by sender.
      */
-    public function deleteFor(Model|Authenticatable $user)
+    public function scopeBySender($query, $senderType, $senderId)
     {
-
-        $conversation = $this->conversation;
-
-        // Make sure auth belongs to conversation for this message
-        abort_unless($user->belongsToConversation($conversation), 403);
-
-        // If conversation is self, then delete permanently directly
-        if ($conversation->isSelf()) {
-            return $this->forceDelete();
-
-        }
-
-        // Try to create an action
-        $this->actions()->create([
-            'actor_id' => $user->getKey(),
-            'actor_type' => $user->getMorphClass(),
-            'type' => Actions::DELETE,
-        ]);
-
-        // If it's a private conversation (only 2 users), then check if both users have deleted the message
-        if ($conversation->isPrivate()) {
-
-            // Eager load particiapnts
-            $conversation->loadMissing('participants.participantable');
-            $deletedByBothParticipants = true;
-
-            foreach ($conversation->participants as $participant) {
-                $deletedByBothParticipants = $deletedByBothParticipants &&
-                    $this->actions()
-                        ->whereActor($participant->participantable)
-                        ->where('type', Actions::DELETE)
-                        ->exists();
-            }
-
-            if ($deletedByBothParticipants) {
-                return $this->forceDelete();
-            }
-        }
-
-        return null;
+        return $query->where('sendable_type', $senderType)
+                    ->where('sendable_id', $senderId);
     }
 
     /**
-     * Deleting message for everyone   */
-    public function deleteForEveryone(Model $user): void
+     * Scope messages by type.
+     */
+    public function scopeOfType($query, $type)
     {
-
-        $conversation = $this->conversation;
-        $participant = $conversation->participant($user);
-        $message = $this;
-
-        // Make sure auth belongs to conversation for this message
-        abort_unless($user->belongsToConversation($conversation), 403, 'You do not belong to this conversation');
-
-        // make sure user owns message OR allow if is admin in group
-        abort_unless($message->ownedBy($user) || ($participant->isAdmin() && $message->conversation->isGroup()), 403, 'You do not have permission to delete this message');
-
-        // if message has reply then only-soft delete it
-        if ($message->hasReply()) {
-            $message->delete();
-        } else {
-
-            $message->forceDelete();
-        }
-
+        return $query->where('type', $type);
     }
 
     /**
-     * Check if the message body contains only emojis.
+     * Check if the message has been edited.
      */
-    public function isEmoji(): bool
+    public function isEdited(): bool
     {
-        if ($this->body == null) {
-            return false;
+        return $this->edited_at !== null;
+    }
+
+    /**
+     * Mark the message as edited.
+     */
+    public function markAsEdited(): void
+    {
+        $this->update(['edited_at' => now()]);
+    }
+
+    /**
+     * Get the sender's name.
+     */
+    public function getSenderNameAttribute(): string
+    {
+        if ($this->sendable) {
+            return $this->sendable->name ?? 'Unknown';
         }
 
-        // Use the isEmoji helper method to check if the message body contains only emojis
-        return Helper::isEmoji($this->body);
+        return 'Unknown';
+    }
+
+    /**
+     * Get formatted message time.
+     */
+    public function getFormattedTimeAttribute(): string
+    {
+        return $this->created_at->format('H:i');
+    }
+
+    /**
+     * Get formatted message date.
+     */
+    public function getFormattedDateAttribute(): string
+    {
+        return $this->created_at->format('Y-m-d');
+    }
+
+    /**
+     * Check if message is from today.
+     */
+    public function isFromToday(): bool
+    {
+        return $this->created_at->isToday();
+    }
+
+    /**
+     * Get message preview (truncated body).
+     */
+    public function getPreviewAttribute(): string
+    {
+        return strlen($this->body) > 50 
+            ? substr($this->body, 0, 50) . '...'
+            : $this->body;
     }
 }

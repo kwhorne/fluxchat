@@ -1,182 +1,91 @@
 <?php
 
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Real-time Configuration
+    |--------------------------------------------------------------------------
+    |
+    | FluxChat supports both standard Livewire (polling) and real-time 
+    | messaging via Laravel Reverb. Configure these settings to enable
+    | or disable real-time features based on your needs.
+    |
+    */
+
+    'realtime' => [
+        'enabled' => env('FLUXCHAT_REALTIME_ENABLED', false),
+        'driver' => env('FLUXCHAT_REALTIME_DRIVER', 'reverb'),
+        'typing_indicators' => env('FLUXCHAT_TYPING_INDICATORS', true),
+        'online_status' => env('FLUXCHAT_ONLINE_STATUS', true),
+        'auto_refresh_interval' => env('FLUXCHAT_AUTO_REFRESH', 5), // seconds
+    ],
 
     /*
     |--------------------------------------------------------------------------
-    | Use UUIDs for Conversations
+    | UI Configuration
     |--------------------------------------------------------------------------
     |
-    | Determines the primary key type for the conversations table and related
-    | relationships. When enabled, UUIDs (version 7 if supported, otherwise
-    | version 4) will be used during initial migrations.
-    |
-    | ⚠️ This setting is intended for **new applications only** and does not
-    | affect how new conversations are created at runtime. It controls whether
-    | migrations generate UUID-based keys or unsigned big integers.
+    | Customize the appearance and behavior of FluxChat components.
     |
     */
-    'uuids' => false,
+
+    'ui' => [
+        'theme' => env('FLUXCHAT_THEME', 'dark'), // dark, light
+        'avatar_size' => env('FLUXCHAT_AVATAR_SIZE', 'sm'),
+        'compact_mode' => env('FLUXCHAT_COMPACT_MODE', false),
+        'show_timestamps' => env('FLUXCHAT_SHOW_TIMESTAMPS', true),
+        'auto_scroll' => env('FLUXCHAT_AUTO_SCROLL', true),
+    ],
 
     /*
     |--------------------------------------------------------------------------
-    | Table Prefix
+    | Message Configuration
     |--------------------------------------------------------------------------
     |
-    | This value will be prefixed to all FluxChat-related database tables.
-    | Useful if you're sharing a database with other apps or packages.
+    | Configure message handling and storage settings.
     |
     */
-    'table_prefix' => 'flux_',
+
+    'messages' => [
+        'max_length' => env('FLUXCHAT_MAX_MESSAGE_LENGTH', 1000),
+        'file_uploads' => env('FLUXCHAT_FILE_UPLOADS', false),
+        'emoji_support' => env('FLUXCHAT_EMOJI_SUPPORT', true),
+        'markdown_support' => env('FLUXCHAT_MARKDOWN_SUPPORT', false),
+    ],
 
     /*
     |--------------------------------------------------------------------------
-    | User Model
+    | Database Configuration
     |--------------------------------------------------------------------------
     |
-    | Specify the fully qualified class name of the Default model used for user search
-    | within FluxChat. This is used when searching for users (e.g., to
-    | start a new conversation)
+    | Configure database table names and relationships.
     |
     */
-    'user_model' => \App\Models\User::class,
+
+    'database' => [
+        'tables' => [
+            'conversations' => 'fluxchat_conversations',
+            'messages' => 'fluxchat_messages',
+            'participants' => 'fluxchat_participants',
+        ],
+        'morphs' => [
+            'sendable' => 'sendable', // User model morph name
+            'receivable' => 'receivable', // Contact/User model morph name
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------
-    | Broadcasting
+    | Broadcasting Configuration
     |--------------------------------------------------------------------------
     |
-    | Configure the queues used for broadcasting messages and notifications.
-    | 'messages_queue' is used for real-time chat events.
-    | 'notifications_queue' handles alert or notification broadcasts.
+    | Configure how FluxChat broadcasts real-time events.
     |
     */
+
     'broadcasting' => [
-        'messages_queue' => 'messages',
-        'notifications_queue' => 'default',
+        'connection' => env('FLUXCHAT_BROADCAST_CONNECTION', 'redis'),
+        'queue' => env('FLUXCHAT_BROADCAST_QUEUE', 'default'),
+        'channel_prefix' => env('FLUXCHAT_CHANNEL_PREFIX', 'fluxchat'),
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Theme Color
-    |--------------------------------------------------------------------------
-    |
-    | Define the primary UI color used in the chat interface.
-    | This will be used to highlight buttons and elements.
-    |
-    */
-    'color' => '#a855f7',
-
-    /*
-    |--------------------------------------------------------------------------
-    | Home Route
-    |--------------------------------------------------------------------------
-    |
-    | The route where users are redirected when they leave or close the chat UI.
-    | This can be any valid route or URL in your application.
-    |
-    */
-    'home_route' => '/',
-
-    /*
-    |--------------------------------------------------------------------------
-    | Routes Configuration
-    |--------------------------------------------------------------------------
-    |
-    | Customize the URL prefix, middleware stack, and guards for all FluxChat
-    | routes. This gives you control over route access and grouping.
-    |
-    */
-    'routes' => [
-        'prefix' => 'chats',
-        'middleware' => ['web', 'auth:web'],
-        'guards' => ['web'],
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Layout View
-    |--------------------------------------------------------------------------
-    |
-    | This is the layout that will be used when rendering FluxChat components
-    | via built-in routes like /chats or /chats/{id}. The $slot will contain
-    | the dynamic chat content.
-    |
-    */
-    'layout' => 'fluxchat::layouts.app',
-
-    /*
-    |--------------------------------------------------------------------------
-    | Feature Toggles
-    |--------------------------------------------------------------------------
-    |
-    | Enable or disable specific frontend features of FluxChat.
-    |
-    */
-    'show_new_chat_modal_button' => true,
-    'show_new_group_modal_button' => true,
-    'allow_chats_search' => true,
-    'allow_media_attachments' => true,
-    'allow_file_attachments' => true,
-
-    /*
-    |--------------------------------------------------------------------------
-    | Notifications
-    |--------------------------------------------------------------------------
-    |
-    | Enable and configure notifications for incoming messages or events.
-    | 'main_sw_script' should point to your service worker JS file.
-    |
-    */
-    'notifications' => [
-        'enabled' => true,
-        'main_sw_script' => 'sw.js', // Relative to public path
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | User Searchable Fields
-    |--------------------------------------------------------------------------
-    |
-    | Define which columns to search when users are looking for other users
-    | to chat with. These fields should exist on your User model.
-    |
-    */
-    'user_searchable_fields' => ['name'],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Maximum Group Members
-    |--------------------------------------------------------------------------
-    |
-    | Set a limit to how many users can be added to a single group chat.
-    |
-    */
-    'max_group_members' => 1000,
-
-    /*
-    |--------------------------------------------------------------------------
-    | Attachments
-    |--------------------------------------------------------------------------
-    |
-    | Configure media and file uploads within conversations. Control disk usage,
-    | visibility, allowed MIME types, and maximum upload sizes.
-    |
-    */
-    'attachments' => [
-        'storage_folder' => 'attachments',
-        'storage_disk' => 'public',
-        'disk_visibility' => 'public', // Use 'private' to enforce temporary URLs
-
-        'max_uploads' => 10,
-
-        // Media Upload Settings
-        'media_mimes' => ['png', 'jpg', 'jpeg', 'gif', 'mov', 'mp4'],
-        'media_max_upload_size' => 12288, // Size in KB (12 MB)
-
-        // File Upload Settings
-        'file_mimes' => ['zip', 'rar', 'txt', 'pdf'],
-        'file_max_upload_size' => 12288, // Size in KB (12 MB)
-    ],
-
 ];

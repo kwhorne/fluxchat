@@ -1,0 +1,11 @@
+{
+    "fluxchat::messages.search_contacts": "Søk kontakter...",
+    "fluxchat::messages.no_contacts_found": "Ingen kontakter funnet",
+    "fluxchat::messages.online": "Online",
+    "fluxchat::messages.no_messages_yet": "Ingen meldinger ennå. Start samtalen!",
+    "fluxchat::messages.start_conversation": "Send din første melding nedenfor",
+    "fluxchat::messages.type_message": "Skriv en melding...",
+    "fluxchat::messages.send": "Send",
+    "fluxchat::messages.select_contact": "Velg en kontakt for å starte en samtale",
+    "fluxchat::messages.choose_contact": "Velg noen fra kontaktlisten for å begynne en samtale"
+}

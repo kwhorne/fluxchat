@@ -1,212 +1,285 @@
 # FluxChat
 
-A modern Laravel Livewire messaging app built with Flux UI for teams with private chats and group conversations.
+A beautiful Laravel Livewire chat component built with Flux UI, supporting both standard polling and real-time messaging with Laravel Reverb.
 
-## Features
+![FluxChat Demo](https://via.placeholder.com/800x400/1f2937/f9fafb?text=FluxChat+Demo)
 
-- 🚀 **Modern UI** - Built with Livewire Flux v2 and Tailwind CSS v4
-- 💬 **Real-time messaging** - WebSocket support via Laravel Reverb
-- 👥 **Group conversations** - Create and manage team discussions
-- 🔒 **Private chats** - Secure one-on-one conversations
-- 🌐 **Multi-language support** - English and Norwegian (Bokmål) included
-- 📱 **Responsive design** - Works on desktop and mobile devices
-- 🎨 **Customizable** - Publish and modify views and translations
+## ✨ Features
 
-## Requirements
+- 🎨 **Beautiful UI** - Built with Flux UI components
+- ⚡ **Real-time Support** - Optional Laravel Reverb integration
+- 🔄 **Fallback Polling** - Works without WebSocket server
+- 🌍 **Multi-language** - English and Norwegian included
+- 📱 **Responsive Design** - Works on all devices
+- 🔧 **Highly Configurable** - Customize everything
+- 🚀 **Easy Installation** - One command setup
 
-- PHP 8.1+
-- Laravel 10.0, 11.0, or 12.0
-- Livewire 3.2.3+
-- Livewire Flux 2.0+
-- Node.js & NPM (for asset compilation)
+## 📋 Requirements
 
-## Installation
+- PHP 8.3+
+- Laravel 12.0+
+- Livewire 3.0+
+- Flux UI Pro 1.0+
 
-### 1. Install the Package
+## 🚀 Installation
+
+Install via Composer:
 
 ```bash
-composer require kwhorne/fluxchat
+composer require wirelabs/fluxchat
 ```
 
-### 2. Run the Installation Command
+Run the installation command:
 
 ```bash
 php artisan fluxchat:install
 ```
 
-**The following actions will be executed:**
-- Publish configuration file
-- Publish migration files
-- Create a storage symlink
-
-### 3. Enable UUIDs (Optional)
-
-If you want FluxChat to use UUIDs instead of auto-incrementing integers for conversations, update the config before running migrations:
-
-```php
-// config/fluxchat.php
-'uuids' => true,
-```
-
-### 4. Run Migrations
+Run migrations:
 
 ```bash
 php artisan migrate
 ```
 
-## Configuration
+## 🎯 Basic Usage
 
-### Step 1: Enable Broadcasting
+Add the component to your Blade view:
 
-In newer Laravel installations, broadcasting is disabled by default. To enable it, run:
+```blade
+<livewire:fluxchat :contacts="$contacts" />
+```
 
+Where `$contacts` is a collection of users/contacts:
+
+```php
+// In your controller
+$contacts = User::where('id', '!=', auth()->id())->get();
+
+return view('chat', compact('contacts'));
+```
+
+## ⚙️ Configuration
+
+Publish the config file:
+
+```bash
+php artisan vendor:publish --tag="fluxchat-config"
+```
+
+### Basic Configuration
+
+```php
+// config/fluxchat.php
+
+return [
+    'realtime' => [
+        'enabled' => env('FLUXCHAT_REALTIME_ENABLED', false),
+        'auto_refresh_interval' => env('FLUXCHAT_AUTO_REFRESH', 5), // seconds
+    ],
+    
+    'ui' => [
+        'theme' => env('FLUXCHAT_THEME', 'dark'),
+        'avatar_size' => env('FLUXCHAT_AVATAR_SIZE', 'sm'),
+    ],
+];
+```
+
+### Environment Variables
+
+Add to your `.env` file:
+
+```env
+# Standard mode (polling every 5 seconds)
+FLUXCHAT_REALTIME_ENABLED=false
+FLUXCHAT_AUTO_REFRESH=5
+
+# Real-time mode (requires Reverb)
+FLUXCHAT_REALTIME_ENABLED=true
+BROADCAST_CONNECTION=reverb
+```
+
+## 🔥 Real-time Messaging
+
+FluxChat supports two modes:
+
+### 1. Standard Mode (Default)
+- Polls for new messages every 5 seconds
+- No additional server required
+- Works everywhere
+
+### 2. Real-time Mode
+- Instant message delivery via WebSockets
+- Requires Laravel Reverb
+- Better user experience
+
+To enable real-time messaging:
+
+1. Install and configure Laravel Reverb:
 ```bash
 php artisan install:broadcasting
 ```
 
-> **Note:** This command will prompt you to install Laravel Reverb and necessary front-end packages such as Echo. Accept if you don't yet have a WebSocket server set up.
+2. Update your `.env`:
+```env
+FLUXCHAT_REALTIME_ENABLED=true
+BROADCAST_CONNECTION=reverb
+```
 
-Then, start your Reverb server:
-
+3. Start the Reverb server:
 ```bash
 php artisan reverb:start
 ```
 
-For more details, refer to the [Laravel Broadcasting Documentation](https://laravel.com/docs/broadcasting), including information on integrating Laravel Echo for real-time updates.
+## 🎨 Customization
 
-### Step 2: Start Your Queue Worker
-
-After configuring broadcasting, start a queue worker to handle message broadcasting and other queued tasks:
-
-```bash
-php artisan queue:work --queue=messages,default
-```
-
-> **Queue Prioritization:** The `messages` queue is prioritized to ensure real-time message delivery.
-
-### Step 3: Start Development Server
-
-To start your development server, run:
-
-```bash
-composer run dev
-```
-
-If you're not running the latest Laravel version, you can run these commands separately:
-
-```bash
-php artisan serve
-npm run dev
-```
-
-## Customization
-
-### Publishing Translations
-
-If you need to customize the language files, you can publish them using:
-
-```bash
-php artisan vendor:publish --tag=fluxchat-translations
-```
-
-Available languages:
-- English (`en`)
-- Norwegian Bokmål (`nb`)
-
-### Publishing Views
-
-To modify FluxChat's Blade views, publish them with:
-
-```bash
-php artisan vendor:publish --tag=fluxchat-views
-```
-
-### Publishing Configuration
-
-To customize the configuration, publish the config file:
-
-```bash
-php artisan vendor:publish --tag=fluxchat-config
-```
-
-## Usage
-
-### Adding FluxChat to Your Layout
-
-Add FluxChat to your Blade layout:
+### Custom Contact Model
 
 ```blade
-<!-- In your layout file -->
-@fluxchatAssets
-@fluxchatStyles
+<livewire:fluxchat 
+    :contacts="$contacts"
+    contact-model="App\Models\Contact"
+    contact-name-field="full_name"
+    :contact-search-fields="['name', 'email']"
+/>
 ```
 
-### Using the Chat Component
+### Custom Styling
 
-You can use FluxChat in your Blade views:
+Publish the views to customize:
 
-```blade
-<livewire:fluxchat />
+```bash
+php artisan vendor:publish --tag="fluxchat-views"
 ```
 
-### Page Components
+Views will be published to `resources/views/vendor/fluxchat/`.
 
-FluxChat provides dedicated page components:
+### Language Customization
 
-```blade
-<!-- Chat list page -->
-<livewire:fluxchat.pages.index />
+Publish language files:
 
-<!-- Individual chat page -->
-<livewire:fluxchat.pages.view :conversation="$conversation" />
+```bash
+php artisan vendor:publish --tag="fluxchat-lang"
 ```
 
-## Flux UI Integration
+Add your own translations in `resources/lang/vendor/fluxchat/`.
 
-FluxChat is built with Livewire Flux v2, providing:
+## 📚 Advanced Usage
 
-- **Modern Components** - Beautiful, accessible UI components
-- **Dark Mode Support** - Automatic dark/light mode switching
-- **Inter Font** - Clean, modern typography
-- **Tailwind CSS v4** - Latest CSS framework features
+### Programmatic Control
 
-## Development
+```php
+// In your Livewire component
+use Wirelabs\FluxChat\Models\Conversation;
+use Wirelabs\FluxChat\Models\Message;
 
-### Running Tests
+// Create a conversation
+$conversation = Conversation::create([
+    'type' => 'private',
+    'is_group' => false,
+]);
+
+// Add participants
+$conversation->addParticipant(auth()->user());
+$conversation->addParticipant($contact);
+
+// Send a message
+$message = $conversation->messages()->create([
+    'sendable_id' => auth()->id(),
+    'sendable_type' => User::class,
+    'body' => 'Hello!',
+    'type' => 'text',
+]);
+```
+
+### Events
+
+Listen to FluxChat events:
+
+```php
+// EventServiceProvider
+use Wirelabs\FluxChat\Events\MessageSent;
+
+protected $listen = [
+    MessageSent::class => [
+        SendMessageNotification::class,
+    ],
+];
+```
+
+## 🧪 Testing
 
 ```bash
 composer test
 ```
 
-### Code Quality
+## 📖 API Reference
 
+### Component Properties
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `contacts` | Collection/Array | `[]` | Available contacts |
+| `contactModel` | String | `User::class` | Contact model class |
+| `contactNameField` | String | `'name'` | Contact name field |
+| `contactSearchFields` | Array | `['name']` | Searchable fields |
+| `maxContacts` | Integer | `10` | Max contacts to show |
+
+### Models
+
+#### Conversation
+- `messages()` - Get all messages
+- `participants()` - Get all participants
+- `addParticipant($user)` - Add participant
+- `markAsRead($user)` - Mark as read
+
+#### Message
+- `conversation()` - Get conversation
+- `sendable()` - Get sender
+- `isEdited()` - Check if edited
+
+## 🛠️ Troubleshooting
+
+### Real-time not working
+
+1. Check Reverb is running:
 ```bash
-composer analyse
-composer format
+php artisan reverb:start --debug
 ```
 
-### Building Assets
-
+2. Verify configuration:
 ```bash
-npm run build
+php artisan config:show broadcasting.default
 ```
 
-## Contributing
+3. Check browser console for WebSocket connections
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### Messages not updating
 
-## License
+1. Ensure auto-refresh is enabled:
+```env
+FLUXCHAT_AUTO_REFRESH=5
+```
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+2. Check Livewire is working:
+```blade
+@livewireScripts
+```
 
-## Support
+## 🤝 Contributing
 
-For support, please open an issue on the [GitHub repository](https://github.com/kwhorne/fluxchat).
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## 📄 License
+
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+
+## 🙏 Credits
+
+- Built by [Wirelabs](https://insidenext.no)
+- Powered by [Laravel](https://laravel.com)
+- UI by [Flux UI](https://fluxui.dev)
+- Real-time by [Laravel Reverb](https://laravel.com/docs/broadcasting)
 
 ---
 
-**Made with ❤️ by [Knut W. Horne](https://kwhorne.com)**
+**Made with ❤️ by Wirelabs**
