@@ -1,6 +1,6 @@
 {
     "name": "wirelabs/fluxchat",
-    "version": "0.2.1",
+    "version": "v0.2.1",
     "description": "A beautiful Laravel Livewire chat component built with Flux UI, supporting real-time messaging with Reverb.",
     "keywords": ["laravel", "livewire", "chat", "flux-ui", "real-time", "reverb", "messaging"],
     "license": "MIT",
