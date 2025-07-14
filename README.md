@@ -17,7 +17,7 @@ A beautiful Laravel Livewire chat component built with Flux UI, supporting both 
 - PHP 8.3+
 - Laravel 12.0+
 - Livewire 3.0+
-- Flux UI Pro 1.0+
+- Flux UI Pro 2.0+
 
 ## 🚀 Installation
 
