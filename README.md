@@ -2,6 +2,8 @@
 
 A beautiful Laravel Livewire chat component built with Flux UI, supporting both standard polling and real-time messaging with Laravel Reverb.
 
+![FluxChat Preview](https://github.com/user-attachments/assets/3fc916f-902e-35b-b192-952e35b14568)
+
 ## ✨ Features
 
 - 🎨 **Beautiful UI** - Built with Flux UI components
